@@ -22,28 +22,35 @@ FIRST_SUPERUSER_EMAIL=admin@example.com
 FIRST_SUPERUSER_PASSWORD=admin_password_123
 ```
 
-### 3. Cài đặt Dependencies
+### 3. Cài đặt Dependencies (Sử dụng Poetry)
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+# Cài đặt toàn bộ package (nếu chưa cài)
+poetry install
 ```
 
 ### 4. Khởi tạo Database và Seeding Admin
 Chạy script để tạo database (`admin_db`, `token_db`) và tạo tài khoản admin đầu tiên:
 ```bash
+# Mở Docker daemon/OrbStack và chạy PostgreSQL
+docker compose up -d
+
 # Tạo các Database nếu chưa có
-PYTHONPATH=. venv/bin/python init_databases.py
+PYTHONPATH=. poetry run python3 init_databases.py
+
+# Chạy database migrations qua Alembic
+PYTHONPATH=. poetry run alembic upgrade head
 
 # Seed tài khoản Admin và cấu hình quyền hạn
-PYTHONPATH=. venv/bin/python seed_admin.py
+PYTHONPATH=. poetry run python3 seed_admin.py
 ```
 
 ### 5. Chạy ứng dụng
-Sử dụng Granian server (hiệu năng cao) để khởi động:
+Sử dụng Granian server thông qua poetry:
 ```bash
-PYTHONPATH=. venv/bin/python app/main.py
+PYTHONPATH=. poetry run python3 app/main.py
 ```
+
+💡 Mẹo: Bạn cũng có thể dùng trực tiếp script `./run.sh` để tự động khởi động database và server cùng lúc.
 Server sẽ lắng nghe tại: `http://localhost:8000`
 
 ## 🛠 Cách sử dụng (Quick Start)

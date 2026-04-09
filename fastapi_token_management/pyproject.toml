@@ -1,0 +1,45 @@
+[project]
+name = "fastapi-token-management"
+version = "0.1.0"
+description = "FastAPI Project"
+authors = [
+    {name = "Your Name",email = "you@example.com"}
+]
+readme = "README.md"
+requires-python = ">=3.9.2,<4.0"
+dependencies = [
+    "fastapi (==0.128.8)",
+    "granian[reload] (==2.5.7)",
+    "pydantic (==2.12.5)",
+    "pydantic-settings (==2.11.0)",
+    "python-dotenv (==1.2.1)",
+    "sqlalchemy (==2.0.48)",
+    "asyncpg (==0.31.0)",
+    "greenlet (==3.2.5)",
+    "polars (==1.36.1)",
+    "adbc-driver-postgresql (==1.8.0)",
+    "adbc-driver-manager (==1.8.0)",
+    "cryptography (==46.0.6)",
+    "passlib (==1.7.4)",
+    "bcrypt (==3.1.7)",
+    "python-jose (==3.5.0)",
+    "python-multipart (==0.0.20)",
+    "email-validator (>=2.3.0,<3.0.0)",
+    "alembic (<1.15.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest (==8.4.2)",
+    "pytest-asyncio (==1.2.0)",
+    "anyio (==4.12.1)",
+    "httpx (==0.28.1)"
+]
+
+[tool.poetry]
+package-mode = false
