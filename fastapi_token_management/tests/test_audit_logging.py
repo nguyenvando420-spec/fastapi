@@ -17,14 +17,15 @@ async def test_audit_logging_tokenize(override_get_db, db_session, token_db_sess
     db_session.add(system)
     await db_session.flush()
     
-    domain = Domain(name="audit_dom", system_id=system.id, version="v1.2")
+    domain = Domain(name="audit_dom", system_id=system.id, version_number=1, version="v1", status="active")
     db_session.add(domain)
     await db_session.flush()
     
-    # Tạo schema và table vật lý TRÊN TOKEN DATABASE
+    # Tạo schema và table vật lý TRÊN TOKEN DATABASE (tên bảng = domain_v{version_number})
     from sqlalchemy import text
+    table_name = f"{domain.name}_v{domain.version_number}"  # e.g. "audit_dom_v1"
     await token_db_session.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{system.name}"'))
-    table_ddl = f'CREATE TABLE IF NOT EXISTS "{system.name}"."{domain.name}" (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), token TEXT UNIQUE, encrypt_dek_data TEXT, kek TEXT, created_at TIMESTAMP, updated_at TIMESTAMP)'
+    table_ddl = f'CREATE TABLE IF NOT EXISTS "{system.name}"."{table_name}" (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), token TEXT UNIQUE, encrypt_dek_data TEXT, kek TEXT, created_at TIMESTAMP, updated_at TIMESTAMP)'
     await token_db_session.execute(text(table_ddl))
     await token_db_session.commit()
 
@@ -58,7 +59,7 @@ async def test_audit_logging_tokenize(override_get_db, db_session, token_db_sess
         assert log.status == "success"
         assert log.total_token == 2
         assert log.duration > 0
-        assert log.version == "v1.2"
+        assert log.version == "v1"
 
 @pytest.mark.asyncio
 async def test_audit_logging_denied(override_get_db, db_session, auth_token):
@@ -110,7 +111,9 @@ async def test_audit_retrieval_api(override_get_db, db_session, auth_token):
         # 1. Gọi API lấy log (Admin có quyền super '*' nên sẽ OK)
         resp = await ac.get("/api/v1/audit/", headers=headers)
         assert resp.status_code == 200
-        assert isinstance(resp.json(), list)
+        data = resp.json()
+        assert "items" in data
+        assert isinstance(data["items"], list)
         
         # 2. Thử filter
         resp_filter = await ac.get("/api/v1/audit/?request_type=tokenize", headers=headers)

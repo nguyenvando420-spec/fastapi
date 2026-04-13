@@ -12,7 +12,7 @@ async def test_create_system_and_domain(db_session):
     await db_session.flush() # Flush đẩy ID về mà không cần tắt giao dịch transaction
     
     # Create Domain liên kết với System
-    domain = Domain(name="card_tokens", system_id=system.id, version="v1.0")
+    domain = Domain(name="card_tokens", system_id=system.id, version_number=1, version="v1", status="active")
     db_session.add(domain)
     await db_session.flush()
     

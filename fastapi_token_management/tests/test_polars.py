@@ -22,10 +22,10 @@ def test_tokenize_and_detokenize_dataframe():
     assert "kek" in df_tokenized.columns
     assert df_tokenized.shape[0] == 3 # Số records không đổi
     
-    # Đảm bảo data đã khác biệt giữa các row và có format version:token
+    # Đảm bảo data đã khác biệt giữa các row và có format system:domain:version:hmac
     tokens = df_tokenized["token"].to_list()
     assert len(set(tokens)) == 3
-    assert tokens[0].startswith("v1:")
+    assert tokens[0].startswith("sys:dom:v1:")
     
     # 3. Phục vụ việc Detokenize (Đọc từ Database lên)
     # df_tokenized chính tả mockup table lấy về

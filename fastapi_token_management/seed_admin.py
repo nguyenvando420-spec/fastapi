@@ -21,7 +21,7 @@ async def seed_admin():
             role_stmt = select(Role).options(selectinload(Role.permissions)).where(Role.id == role.id)
             role = (await session.execute(role_stmt)).scalar_one()
 
-        # 2. Get or Create Admin User
+        # 2. Get or Create Admin User (with is_superuser=True)
         user_stmt = select(User).options(selectinload(User.roles)).where(User.username == settings.FIRST_SUPERUSER)
         user = (await session.execute(user_stmt)).scalar_one_or_none()
         if not user:
@@ -30,32 +30,50 @@ async def seed_admin():
                 username=settings.FIRST_SUPERUSER,
                 email=settings.FIRST_SUPERUSER_EMAIL,
                 hashed_password=get_password_hash(settings.FIRST_SUPERUSER_PASSWORD),
-                is_active=True
+                is_active=True,
+                is_superuser=True,  # Superuser bypass mọi permission check
+                auth_source="local",
+                display_name="System Administrator"
             )
             session.add(user)
             await session.flush()
             # Re-fetch with roles if just created
             user_stmt = select(User).options(selectinload(User.roles)).where(User.id == user.id)
             user = (await session.execute(user_stmt)).scalar_one()
+        else:
+            # Đảm bảo admin luôn là superuser
+            if not user.is_superuser:
+                user.is_superuser = True
+                print(f"Updated '{user.username}' to is_superuser=True")
             
         if role not in user.roles:
             print(f"Assigning 'superuser' role to user '{user.username}'")
             user.roles.append(role)
         
-        # 3. Handle Permissions
+        # 3. Handle Permissions (bao gồm cả admin:* permissions cho quản trị)
         permissions_to_create = [
-            ("*", "*"),
-            ("admin:users", "create")
+            ("*", "*", "Full access to all resources and actions"),
+            ("admin:users", "create", "Create new users"),
+            ("admin:users", "read", "View user list and details"),
+            ("admin:users", "write", "Modify user roles, groups, and status"),
+            ("admin:roles", "create", "Create new roles"),
+            ("admin:roles", "read", "View role list"),
+            ("admin:roles", "write", "Modify role permissions"),
+            ("admin:groups", "create", "Create new groups"),
+            ("admin:groups", "read", "View group list"),
+            ("admin:groups", "write", "Modify group members and roles"),
+            ("admin:permissions", "create", "Create new permissions"),
+            ("admin:permissions", "read", "View permission list"),
         ]
         
-        for res, act in permissions_to_create:
+        for res, act, desc in permissions_to_create:
             perm_stmt = select(Permission).where(
                 (Permission.resource == res) & (Permission.action == act)
             )
             perm = (await session.execute(perm_stmt)).scalar_one_or_none()
             if not perm:
                 print(f"Creating permission {res}:{act}")
-                perm = Permission(resource=res, action=act)
+                perm = Permission(resource=res, action=act, description=desc)
                 session.add(perm)
                 await session.flush()
             

@@ -1,7 +1,7 @@
 import pytest
 import uuid
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy import select, text
 from app.main import app
@@ -15,7 +15,7 @@ async def test_audit_log_pruning_service(db_session):
     # 1. Tạo log mới (1 ngày trước)
     log_new = AuditLog(
         request_type="test",
-        request_time=datetime.utcnow() - timedelta(days=1),
+        request_time=datetime.now(timezone.utc) - timedelta(days=1),
         duration=0.1,
         status="success",
         auth_status="allowed"
@@ -23,7 +23,7 @@ async def test_audit_log_pruning_service(db_session):
     # 2. Tạo log cũ (100 ngày trước)
     log_old = AuditLog(
         request_type="test",
-        request_time=datetime.utcnow() - timedelta(days=100),
+        request_time=datetime.now(timezone.utc) - timedelta(days=100),
         duration=0.1,
         status="success",
         auth_status="allowed"
@@ -42,7 +42,7 @@ async def test_audit_log_pruning_service(db_session):
     # Chỉ còn log_new
     assert len(remaining_logs) >= 1
     for log in remaining_logs:
-        assert log.request_time > (datetime.utcnow() - timedelta(days=90))
+        assert log.request_time > (datetime.now(timezone.utc) - timedelta(days=90))
 
 @pytest.mark.asyncio
 async def test_audit_retention_api(db_session, auth_token):
@@ -71,7 +71,7 @@ async def test_manual_cleanup_api(db_session, auth_token):
     # Tạo 1 log cực cũ
     log_very_old = AuditLog(
         request_type="manual_test",
-        request_time=datetime.utcnow() - timedelta(days=500),
+        request_time=datetime.now(timezone.utc) - timedelta(days=500),
         duration=0.5,
         status="success",
         auth_status="allowed"

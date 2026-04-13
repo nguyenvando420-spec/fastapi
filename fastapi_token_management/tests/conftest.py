@@ -81,9 +81,20 @@ async def token_db_session(token_engine):
 async def override_get_db(db_session, token_db_session):
     """Override cả 2 dependency session cho app"""
     async def _get_admin_db():
-        yield db_session
+        try:
+            yield db_session
+            await db_session.commit()
+        except:
+            await db_session.rollback()
+            raise
+
     async def _get_token_db():
-        yield token_db_session
+        try:
+            yield token_db_session
+            await token_db_session.commit()
+        except:
+            await token_db_session.rollback()
+            raise
     
     app.dependency_overrides[get_db_session] = _get_admin_db
     app.dependency_overrides[get_token_db_session] = _get_token_db
@@ -97,17 +108,24 @@ async def auth_token(db_session: AsyncSession) -> str:
     from app.core.security import create_access_token, get_password_hash
     import uuid
     
+    from sqlalchemy import select
+    
     username = f"user_{uuid.uuid4().hex[:8]}"
     hashed_password = get_password_hash("password123")
     
-    super_perm = Permission(resource="*", action="*")
-    db_session.add(super_perm)
+    stmt = select(Permission).where((Permission.resource == "*") & (Permission.action == "*"))
+    super_perm = (await db_session.execute(stmt)).scalar_one_or_none()
+    
+    if not super_perm:
+        super_perm = Permission(resource="*", action="*")
+        db_session.add(super_perm)
+        await db_session.flush()
     
     admin_role = Role(
         name=f"admin_{uuid.uuid4().hex[:8]}", 
-        description="Global Admin",
-        permissions=[super_perm]
+        description="Global Admin"
     )
+    admin_role.permissions.append(super_perm)
     db_session.add(admin_role)
     
     user = User(

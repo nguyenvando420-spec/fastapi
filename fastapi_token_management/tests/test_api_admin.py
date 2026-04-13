@@ -24,7 +24,7 @@ async def test_create_system_api(override_get_db, auth_token):
         assert "created_at" in data
 
 @pytest.mark.asyncio
-async def test_create_domain_api(override_get_db, db_session, auth_token):
+async def test_create_domain_api(override_get_db, db_session, token_db_session, auth_token):
     """Test POST /api/v1/admin/domains"""
     headers = {"Authorization": f"Bearer {auth_token}"}
     # 1. Setup: Tạo 1 system cha trước vì domain cần FK system_id
@@ -38,10 +38,13 @@ async def test_create_domain_api(override_get_db, db_session, auth_token):
     await db_session.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{system.name}"'))
     await db_session.commit()
     
+    # NEW: Cần tạo schema trên Token DB vì Token_Service/Admin_Service sẽ ghi table vào Token DB
+    await token_db_session.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{system.name}"'))
+    await token_db_session.commit()
+    
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         payload = {
             "name": "api_test_domain",
-            "version": "v1.1",
             "system_id": str(system.id),
             "description": "Domain created via API test"
         }
@@ -54,13 +57,15 @@ async def test_create_domain_api(override_get_db, db_session, auth_token):
         assert response.status_code == 201
         data = response.json()
         assert data["name"] == "api_test_domain"
-        assert data["version"] == "v1.1"
+        assert data["version"] == "v1"
+        assert data["version_number"] == 1
+        assert data["status"] == "active"
         assert data["system_id"] == str(system.id)
 
 @pytest.mark.asyncio
 async def test_health_check_api():
     """Test endpoint GET / (health check)"""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        response = await ac.get("/")
+        response = await ac.get("/health")
         assert response.status_code == 200
         assert response.json()["status"] == "online"

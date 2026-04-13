@@ -8,17 +8,17 @@ from app.core.security import (
     decrypt_payload
 )
 
-def _process_tokenization(data_series: pl.Series, mac_key: bytes, version: str) -> pl.Series:
+def _process_tokenization(data_series: pl.Series, mac_key: bytes, system: str, domain: str, version: str) -> pl.Series:
     """Hàm helper chạy Python loop nội bộ (an toàn và chuẩn chỉ cho mọi phiên bản Polars)"""
     results = []
     for val in data_series:
         if val is None:
             results.append({"token": None, "encrypt_dek_data": None, "kek": None})
             continue
-            
-        # Format token: {version}:{token_hmac}
+
+        # Format token: {system}:{domain}:{version}:{hmac}
         token_hmac = generate_hmac_token(val, mac_key)
-        token = f"{version}:{token_hmac}"
+        token = f"{system}:{domain}:{version}:{token_hmac}"
         
         kek = generate_kek()
         encrypt_dek_data = encrypt_payload(val, kek)
@@ -38,7 +38,7 @@ def tokenize_dataframe(df: pl.DataFrame, system: str, domain: str, version: str,
     mac_key = get_mac_key_from_api(system, domain)
     
     # 2. Xử lý đồng loạt (Vectorize loop fallback bằng helper)
-    struct_series = _process_tokenization(df[data_column], mac_key, version)
+    struct_series = _process_tokenization(df[data_column], mac_key, system, domain, version)
     
     # 3. Chèn Cột Struct vào data frame rồi giải nén thành 3 cột rời
     res_df = df.with_columns(struct_series).unnest("crypto_info")

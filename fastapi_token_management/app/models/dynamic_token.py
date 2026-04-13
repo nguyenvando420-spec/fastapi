@@ -39,6 +39,7 @@ def create_dynamic_token_model(schema_name: str, table_name: str):
         # Key Encryption Key dùng để bọc/mở DEK
         kek: Mapped[str] = mapped_column(String, nullable=False)
         
-        created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+        from sqlalchemy import DateTime
+        created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
         
     return DynamicToken
